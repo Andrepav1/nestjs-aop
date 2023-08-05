@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { UseAspect, Advice } from 'ts-aspect';
-import { LoggingAspect } from './logging.aspect';
+import { ClassLogger, Logger } from './decorator';
 
+@ClassLogger()
 @Injectable()
 export class AppService {
-  @UseAspect(Advice.Around, LoggingAspect)
-  getHello(): string {
-    return 'Hello World!';
+  // @Logger()
+  getHello(name = 'world'): string {
+    return 'Hello ' + name;
   }
 }

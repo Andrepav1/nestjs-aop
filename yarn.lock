@@ -71,6 +71,16 @@
     ora "5.4.1"
     rxjs "7.8.1"
 
+"@aspectjs/common@^0.3.9":
+  version "0.3.9"
+  resolved "https://registry.yarnpkg.com/@aspectjs/common/-/common-0.3.9.tgz#66f5024375e63d73484e9f620136bd705d564074"
+  integrity sha512-dFr4poBop0fRw+7Cj1QpHkuuc2ViZXONiP+J1vdNPXnLlG8BOtZKhrMBvDkoIAHhkisdD09I+AmoCcoahSr2UA==
+
+"@aspectjs/core@^0.3.9":
+  version "0.3.9"
+  resolved "https://registry.yarnpkg.com/@aspectjs/core/-/core-0.3.9.tgz#e5a52f00b72f189b9d869e02c3a1fe7eda7bd170"
+  integrity sha512-qQl2nLqsbrezyvHkfvMGhgtwgwdDDEUVJ2jkYPWp6UiBUJgm+rQ7W22TawT/QgkY6OJJ5bEiWBvVMjzVDq200g==
+
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.12.13", "@babel/code-frame@^7.16.7", "@babel/code-frame@^7.22.5":
   version "7.22.5"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.22.5.tgz#234d98e1551960604f1246e6475891a570ad5658"
@@ -817,13 +827,6 @@
   integrity sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA==
   dependencies:
     "@sinonjs/commons" "^3.0.0"
-
-"@toss/nestjs-aop@^2.1.0":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@toss/nestjs-aop/-/nestjs-aop-2.1.0.tgz#d1d0daab92dc262820c57b078dadc842e9a6f6c7"
-  integrity sha512-H7MoNSH+xW4fO1pCpq2TwFAA5pQ2W61t9lHZH6DxKN+kiOFd8pIHQoBeSSY28ZLF9V7mub5vW/vf6gDmJoj7fA==
-  dependencies:
-    ramda "^0.28.0"
 
 "@tsconfig/node10@^1.0.7":
   version "1.0.9"
@@ -3915,11 +3918,6 @@ queue-microtask@^1.2.2:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/queue-microtask/-/queue-microtask-1.2.3.tgz#4929228bbc724dfac43e0efb058caf7b6cfb6243"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
-
-ramda@^0.28.0:
-  version "0.28.0"
-  resolved "https://registry.yarnpkg.com/ramda/-/ramda-0.28.0.tgz#acd785690100337e8b063cab3470019be427cc97"
-  integrity sha512-9QnLuG/kPVgWvMQ4aODhsBUFKOUmnbUnsSXACv+NCQZcHbeb+v8Lodp8OVxtRULN1/xOyYLLaL6npE6dMq5QTA==
 
 randombytes@^2.1.0:
   version "2.1.0"
