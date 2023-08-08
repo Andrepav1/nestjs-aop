@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { ClassLogger, Logger } from './decorator';
+import { LogClassDecorator, LogDecorator, Logger } from './decorator';
 
-@ClassLogger()
+// @ClassLogger()
+// @LogClassDecorator()
 @Injectable()
 export class AppService {
   // @Logger()
-  getHello(name = 'world'): string {
+  // @LogDecorator()
+  async getHello(name = 'world'): Promise<string> {
+    // throw new Error('THIS IS AN ERROR');
     return 'Hello ' + name;
   }
 }

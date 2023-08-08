@@ -4,6 +4,7 @@ import {
   Injectable,
   SetMetadata,
   OnModuleInit,
+  Inject,
 } from '@nestjs/common';
 import {
   DiscoveryModule,
@@ -12,6 +13,7 @@ import {
   Reflector,
 } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
+import { LoggerService } from './logger.service';
 
 /* eslint-disable @typescript-eslint/ban-types */
 export type WrapParams<T extends Function = Function, M = unknown> = {
@@ -28,88 +30,11 @@ export interface LazyDecorator<T extends Function = Function, M = unknown> {
   wrap(params: WrapParams<T, M>): T;
 }
 
-export const AddMetadataToMethods = <
-  K extends string | symbol = string,
-  V = any,
->(
-  metadataKey: K,
-  metadataValue: V,
-): MethodDecorator => {
-  const decoratorFactory = (
-    _: any,
-    __: string | symbol,
-    descriptor: PropertyDescriptor,
-  ): TypedPropertyDescriptor<any> => {
-    if (!Reflect.hasMetadata(metadataKey, descriptor.value)) {
-      Reflect.defineMetadata(metadataKey, [], descriptor.value);
-    }
-    const metadataValues: V[] = Reflect.getMetadata(
-      metadataKey,
-      descriptor.value,
-    );
-    metadataValues.push(metadataValue);
-    return descriptor;
-  };
-  decoratorFactory.KEY = metadataKey;
-  debugger;
-  return decoratorFactory;
-};
-
-export const AddMetadata = <K extends string | symbol = string, V = any>(
-  metadataKey: K,
-  metadataValue: V,
-): MethodDecorator => {
-  const decoratorFactory = (
-    _: any,
-    __: string | symbol,
-    descriptor: PropertyDescriptor,
-  ): TypedPropertyDescriptor<any> => {
-    if (!Reflect.hasMetadata(metadataKey, descriptor.value)) {
-      Reflect.defineMetadata(metadataKey, [], descriptor.value);
-    }
-    const metadataValues: V[] = Reflect.getMetadata(
-      metadataKey,
-      descriptor.value,
-    );
-    metadataValues.push(metadataValue);
-    return descriptor;
-  };
-  decoratorFactory.KEY = metadataKey;
-  return decoratorFactory;
-};
-
-export const createClassDecorator = (
-  metadataKey: symbol | string,
-  metadata?: unknown,
-): ClassDecorator => {
-  const aopSymbol = Symbol('AOP_CLASS_DECORATOR');
-  return applyDecorators(
-    // 1. Add metadata to all class methods
-    (target: any) => {
-      //   debugger;
-
-      const decoratorFactory = (
-        _: any,
-        __: string | symbol,
-        descriptor: PropertyDescriptor,
-      ): TypedPropertyDescriptor<any> => {
-        debugger;
-        if (!Reflect.hasMetadata(metadataKey, descriptor.value)) {
-          Reflect.defineMetadata(metadataKey, [], descriptor.value);
-        }
-        const metadataValues: any[] = Reflect.getMetadata(
-          metadataKey,
-          descriptor.value,
-        );
-        metadataValues.push({ originalClass: target, aopSymbol, metadata });
-        return descriptor;
-      };
-      decoratorFactory.KEY = metadataKey;
-
-      return decoratorFactory;
-    },
-  );
-};
+export interface MetadataValue {
+  metadata?: unknown;
+  aopSymbol: symbol;
+  originalFn: unknown;
+}
 
 /**
  * @param metadataKey equal to 1st argument of Aspect Decorator
@@ -120,48 +45,49 @@ export const createDecorator = (
   metadata?: unknown,
 ): MethodDecorator => {
   const aopSymbol = Symbol('AOP_DECORATOR');
-  return applyDecorators(
-    // 1. Add metadata to the method
-    (
-      target: any,
-      propertyKey: string | symbol,
-      descriptor: PropertyDescriptor,
-    ) => {
-      return AddMetadata<
-        symbol | string,
-        { metadata?: unknown; aopSymbol: symbol; originalFn: unknown }
-      >(metadataKey, {
-        originalFn: descriptor.value,
-        metadata,
-        aopSymbol,
-      })(target, propertyKey, descriptor);
-    },
-    // 2. Wrap the method before the lazy decorator is executed
-    (_: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-      const originalFn = descriptor.value;
 
-      descriptor.value = function (this: any, ...args: any[]) {
-        if (this[aopSymbol]?.[propertyKey]) {
-          // If there is a wrapper stored in the method, use it
-          return this[aopSymbol][propertyKey].apply(this, args);
-        }
-        // if there is no wrapper that comes out of method, call originalFn
-        return originalFn.apply(this, args);
-      };
+  // Add metadata to the method and wrap the method before the lazy decorator is executed
+  return (
+    target: any,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ) => {
+    if (!Reflect.hasMetadata(metadataKey, descriptor.value)) {
+      Reflect.defineMetadata(metadataKey, [], descriptor.value);
+    }
+    const metadataValues: MetadataValue[] = Reflect.getMetadata(
+      metadataKey,
+      descriptor.value,
+    );
+    metadataValues.push({
+      originalFn: descriptor.value,
+      metadata,
+      aopSymbol,
+    });
 
-      /**
-       * There are codes that using `function.name`.
-       * Therefore the codes below are necessary.
-       *
-       * ex) @nestjs/swagger
-       */
-      Object.defineProperty(descriptor.value, 'name', {
-        value: propertyKey.toString(),
-        writable: false,
-      });
-      Object.setPrototypeOf(descriptor.value, originalFn);
-    },
-  );
+    const originalFn = descriptor.value;
+
+    descriptor.value = function (this: any, ...args: any[]) {
+      if (this[aopSymbol]?.[propertyKey]) {
+        // If there is a wrapper/decorator on the method, use it
+        return this[aopSymbol][propertyKey].apply(this, args);
+      }
+      // otherwise, call originalFn
+      return originalFn.apply(this, args);
+    };
+
+    /**
+     * There are codes that using `function.name`.
+     * Therefore the codes below are necessary.
+     *
+     * ex) @nestjs/swagger
+     */
+    Object.defineProperty(descriptor.value, 'name', {
+      value: propertyKey.toString(),
+      writable: false,
+    });
+    Object.setPrototypeOf(descriptor.value, originalFn);
+  };
 };
 
 /**
@@ -170,7 +96,6 @@ export const createDecorator = (
  */
 @Injectable()
 export class AutoAspectExecutor implements OnModuleInit {
-  private readonly wrappedMethodCache = new WeakMap();
   constructor(
     private readonly discoveryService: DiscoveryService,
     private readonly metadataScanner: MetadataScanner,
@@ -191,9 +116,13 @@ export class AutoAspectExecutor implements OnModuleInit {
       .filter(({ instance }) => instance && Object.getPrototypeOf(instance));
 
     for (const wrapper of instanceWrappers) {
-      if (wrapper.name == 'AppService') {
-        debugger;
+      if (wrapper.name !== 'AppService') {
+        // debugger;
+        continue;
+      } else {
+        // debugger;
       }
+
       const target = wrapper.isDependencyTreeStatic()
         ? wrapper.instance
         : wrapper.metatype.prototype;
@@ -207,55 +136,79 @@ export class AutoAspectExecutor implements OnModuleInit {
         (name) => name,
       );
 
+      const targetProto = Object.getPrototypeOf(target);
+
       for (const methodName of methodNames) {
-        lazyDecorators.forEach((lazyDecorator) => {
-          debugger;
-          const metadataKey = this.reflector.get(
-            ASPECT,
-            lazyDecorator.constructor,
-          );
+        // lazyDecorators.forEach((lazyDecorator) => {
+        //   debugger;
+        //   const metadataKey = this.reflector.get(
+        //     ASPECT,
+        //     lazyDecorator.constructor,
+        //   );
 
-          const metadataList: {
-            originalFn: any;
-            metadata?: unknown;
-            aopSymbol: symbol;
-          }[] = this.reflector.get(metadataKey, target[methodName]);
-          if (!metadataList) {
-            return;
-          }
+        //   const metadataList: {
+        //     originalFn: any;
+        //     metadata?: unknown;
+        //     aopSymbol: symbol;
+        //   }[] = this.reflector.get(metadataKey, target[methodName]);
 
-          for (const { originalFn, metadata, aopSymbol } of metadataList) {
-            const proxy = new Proxy(target[methodName], {
-              apply: (_, thisArg, args) => {
-                // debugger;
-                const cached = this.wrappedMethodCache.get(thisArg) || {};
-                if (cached[aopSymbol]?.[methodName]) {
-                  return Reflect.apply(
-                    cached[aopSymbol][methodName],
-                    lazyDecorator,
-                    args,
-                  );
-                }
-                const wrappedMethod = lazyDecorator.wrap({
-                  instance: thisArg,
-                  methodName,
-                  method: originalFn.bind(thisArg),
-                  metadata,
-                  args,
-                  target,
-                  wrapper,
-                });
-                cached[aopSymbol] ??= {};
-                cached[aopSymbol][methodName] = wrappedMethod;
-                this.wrappedMethodCache.set(thisArg, cached);
-                return Reflect.apply(wrappedMethod, thisArg, args);
-              },
-            });
+        //   if (!metadataList) {
+        //     return;
+        //   }
 
-            target[aopSymbol] ??= {};
-            target[aopSymbol][methodName] = proxy;
-          }
+        //   for (const { originalFn, metadata, aopSymbol } of metadataList) {
+
+        const descriptor = Object.getOwnPropertyDescriptor(
+          targetProto,
+          methodName,
+        );
+
+        const originalFn = descriptor.value;
+
+        // debugger;
+        // Modify the property descriptor of the method printMessage
+        Object.defineProperty(target, methodName, {
+          value: async (...args) => {
+            // debugger;
+            console.log('BEFORE', { args });
+            // Call the original function
+
+            try {
+              const result = await originalFn.call(this, ...args);
+              console.log('AFTER', { result });
+              return result;
+            } catch (error) {
+              console.log('ERROR', { error });
+            }
+          },
+          writable: false,
+          enumerable: true,
+          configurable: true,
         });
+
+        const proxy = new Proxy(target[methodName], {
+          apply: (_, thisArg, args) => {
+            console.log({ target, methodName, thisArg, args, wrapper });
+
+            debugger;
+            // const wrappedMethod = lazyDecorator.wrap({
+            //   instance: thisArg,
+            //   methodName,
+            //   method: originalFn.bind(thisArg),
+            //   metadata,
+            //   args,
+            //   target,
+            //   wrapper,
+            // });
+            // return Reflect.apply(wrappedMethod, thisArg, args);
+          },
+        });
+
+        // this is assigning {} only if target[aopSymbol] is undefined
+        //     target[aopSymbol] ??= {};
+        //     target[aopSymbol][methodName] = proxy;
+        //   }
+        // });
       }
     }
   }

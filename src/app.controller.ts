@@ -6,7 +6,14 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello('Jimmy');
+  async getHello(): Promise<string> {
+    try {
+      // debugger;
+      const result = await this.appService.getHello('Jimmy');
+      return result;
+    } catch (error) {
+      console.log('controller error ---', error);
+      return 'An error occurred';
+    }
   }
 }
